@@ -1,1 +1,1 @@
-# RNAProfilingv2
+# RNAprofilingV2
