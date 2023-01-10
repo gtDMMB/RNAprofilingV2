@@ -19,6 +19,3 @@ tree.py also produces a graphviz file with the .dot extension, which should
 be used to generate the svg which goes in the treeSVG.js file in the 
 test\_site/Data folder. 
 
-The Decision\_Tree\_Example\_Sites repository contains 5 populated websites 
-for various sequences.
-
