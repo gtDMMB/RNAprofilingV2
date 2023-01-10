@@ -1,0 +1,67 @@
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <title>RNA Profiling</title> 
+        <link rel="stylesheet" href="styles.css">
+    <script src="Data/treeSVG.js"></script>
+    <script src="Data/legendJSON.js"></script>
+    <script src="Data/leafJSON.js"></script>
+    <script src="Data/indepNodeJSON.js"></script>
+    <script src="Data/sampleGTBOLTZ.js"></script>
+    <script src="Data/nodeSampleIndicesJSON.js"></script>
+    <script src="Data/sequenceName.js"></script>
+    <script src="ThirdParty/svg.min.js"></script>
+    <script src="index.js"></script>
+    </head>
+    <body>
+        <div class="interactable-diagram">
+
+        <div class="tree">
+            <header>
+                <h4 id="sequence-name" class="sequence-name"></h4>
+            </header>
+
+            <div class="treeholder">
+            <!-- <object data="tree.svg" type="image/svg+xml" id="treesvg" width="100%"></object> -->
+            <div id="treediv" class="treediv"></div>
+            </div>
+        </div>
+
+
+            <div id="feature-column" class="feature-data">
+                <div class="top-data">
+                    <img id="arc-diagram" src="arc_diagram/arc_diagram_default.svg" class="center" width=100%>
+                </div>
+                <div class="scroll-section">
+                    <div id="indep-table-div" class="top-data indep-table-div hidden">
+                        <table id="indep-table" border="1px" align="center"></table>
+                    </div>
+                    <div class="middle-data">
+                        <table id="feature-legend-table" border="1px" align="center" width=100%></table>
+                    </div>
+                    <div class="middle-data" id="raw-legend-div">
+                        <table id="raw-legend-table" border="1px" align="center" width=100%></table>
+                    </div>
+                    <div class="middle-data">
+                        <button id="download-frequent" type=button class="download-button-top" disabled>Download most frequent structure in selection</button>
+                        <button id="download-all" type=button class="download-button-bottom" disabled>Download all structures in selection</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="leaf-image-column" class="leaf-data">
+                <div class="leaf-switch">
+                <label class="switch">
+                    <input id="diagram-type" type="checkbox" checked>
+                    <span class="slider">
+                        <span class="on">Radial Diagrams</span>
+                        <span class="off">Arc Diagrams</span>
+                    </span>
+                </label>
+                </div>
+            </div>
+
+        </div>
+
+    </body>
+</html>
