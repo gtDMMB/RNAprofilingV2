@@ -198,7 +198,8 @@ def load_sample_sequence(
         "sequence": sequence,
         "name": sequence_name,
         "hash": seq_hash,
-        "structures": {}}
+        "structures": {},
+        "sample_files":{}}
 
     for repeat in repeat_idxs:
 
@@ -218,6 +219,7 @@ def load_sample_sequence(
         structures = tuple([structures, list(sequence)])
 
         result_dict["structures"][repeat] = structures
+        result_dict["sample_files"][repeat] = cache_file
 
     return result_dict
 

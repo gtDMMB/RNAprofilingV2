@@ -928,6 +928,7 @@ def main():
     outfile_root = "decision_tree_" + sequence_name
 
     basepair_structures = next(iter(data_dict["structures"].values()))[0]
+    sample_file = next(iter(data_dict["sample_files"].values()))
 
     helix_structures = [data.Basepairs_To_Helices(structure) 
                         for structure in basepair_structures]
@@ -989,8 +990,12 @@ def main():
     output_data_folder = output_folder + "Data/"
 
     import os
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
+    import shutil
+
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
+    shutil.copytree("site_code",output_folder)
+
     if not os.path.exists(arc_diagram_folder):
         os.makedirs(arc_diagram_folder)
     if not os.path.exists(radial_diagram_folder):
@@ -998,7 +1003,7 @@ def main():
     if not os.path.exists(output_data_folder):
         os.makedirs(output_data_folder)
 
-    tree_agraph.write(output_data_folder + "test_tree.dot")
+    tree_agraph.write(output_data_folder + "tree.dot")
 
     coverage = get_coverage_count(tree)
     coverage_prop = coverage / fuzzy_stem_dataframe.shape[0]
@@ -1033,6 +1038,27 @@ def main():
     save_indep_node_data(output_data_folder + "indepNodeJSON.js", tree, fuzzy_stem_dataframe, label_structures, helix_labels, reversed_stem_dict)
     save_node_sample_indices(output_data_folder + "nodeSampleIndicesJSON.js", tree, helix_structures)
 
+    import subprocess
+    subprocess.run(["dot","-T","svg","-o", output_data_folder + "tree.svg",output_data_folder + "tree.dot"])
+
+    with open(output_data_folder + "treeSVG.js","w") as f:
+        f.write("var treeTXT = `\n")
+        with open(output_data_folder + "tree.svg","r") as svg_file:
+            svg_text = svg_file.read()
+        f.write(svg_text)
+        f.write("\n`;")
+
+    with open(output_data_folder + "sequenceName.js","w") as f:
+        f.write("var sequenceName = \"" + sequence_name + "\";\n")
+
+    with open(output_data_folder + "sampleGTBOLTZ.js","w") as f:
+        f.write("var sampleGTBOLTZ = `\n")
+        with open(sample_file,"r") as sample_file:
+            next(sample_file)
+            sample_text = sample_file.read()
+        f.write(sample_text)
+        f.write("\n`;")
+        
 if __name__ == "__main__":
     main()
 
