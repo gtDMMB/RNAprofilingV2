@@ -3,7 +3,6 @@ import data
 import networkx as nx
 import numpy as np
 import itertools
-import pandas as pd
 from hellinger import hellinger_numpy
 from structure_dataframe import StructureDataframe
 
@@ -429,10 +428,7 @@ def merge_contingency_leaves(tree, *args):
                 if arg not in new_arg_values:
                     new_arg_values[arg] = tree.nodes[child][arg]
                 else:
-                    if isinstance(tree.nodes[contingency_node][arg], pd.Index):
-                        new_arg_values[arg] |= tree.nodes[child][arg]
-                    else:
-                        new_arg_values[arg] += tree.nodes[child][arg]
+                    new_arg_values[arg] += tree.nodes[child][arg]
 
         tree.remove_nodes_from(children[1:])
 
@@ -898,7 +894,6 @@ def remove_empty_forced_edges(tree, ignore_leaves=True):
 def main():
     import sys
     import os
-    import pandas as pd
     import itertools
 
     import data
