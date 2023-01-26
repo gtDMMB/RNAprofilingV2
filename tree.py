@@ -899,21 +899,60 @@ def main():
     import data
     import Enumerate
 
-    if len(sys.argv) < 2:
-        print("Usage: python3 tree.py sequence_file.fasta [index]")
-        exit()
+    import argparse
 
-    sequence_file = sys.argv[1]
+    parser = argparse.ArgumentParser(
+            prog = "RNAprofile",
+            description = "Builds graphical representations of large samples of RNA secondary structures")
 
-    repeat_idxs = [1]
-    if len(sys.argv) > 2:
-        repeat_idxs = [sys.argv[2]]
+    parser.add_argument(metavar="sequence_file.fasta",
+            dest="sequence_file")
+    parser.add_argument("--sample_file")
+    parser.add_argument("--sampler", 
+            choices=['RNAstructure','RNAlib'], 
+            default='RNAlib')
+    parser.add_argument("--sample_count",
+            type=int)
+    parser.add_argument("--sample_seed",
+            type=int)
+    parser.add_argument("--output_style",
+            choices=["tree","hasse"],
+            default="tree")
+    parser.add_argument("--feature_type",
+            choices=["selected_helix_classes", "stem_classes"],
+            default="stem_classes")
+    parser.add_argument("--fuzzy_stem_counts",
+            action="store_false")
+    parser.add_argument("--consistent_helix_indexing",
+            action="store_true")
+    parser.add_argument("--frequency_format",
+            choices=["counts","percentages","decimals"],
+            default="counts")
+    parser.add_argument("--contingency_node_proportion")
+    parser.add_argument("--helix_class_selection_cutoff_count",
+            type=int)
+    parser.add_argument("--profile_selection_cutoff_count",
+            type=int)
+    parser.add_argument("--maximum_stem_gap",
+            type=int)
+    parser.add_argument("--fuzzy_stems_region_dilation",
+            type=int)
+    parser.add_argument("--fuzzy_stems_bp_count_margin",
+            type=float)
 
-    data.Init_RNA_Seed()
+    args = parser.parse_args()
+
+    sequence_file = args.sequence_file 
+
+    seed = 1
+    if args.sample_seed is not None:
+        seed = args.sample_seed
+
+    data.Init_RNA_Seed(seed)
 
     data_dict = data.load_sample_sequence(
         sequence_file, 
-        repeat_idxs=repeat_idxs,
+        repeat_idxs=[seed],
         structure_count=1000,
         cache_folder="cached_structures")
 

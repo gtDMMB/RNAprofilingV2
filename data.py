@@ -91,10 +91,10 @@ def Dot_to_BP(dot_string):
     return bp_list
     
 #seed_set = False
-def Init_RNA_Seed():
+def Init_RNA_Seed(seed=''):
     import RNA
 
-    RNA.init_rand()
+    RNA.init_rand(seed)
 
     #seed_set = True
 
