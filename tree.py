@@ -817,11 +817,13 @@ def get_Featured_Helix_Classes(hc_structures, minimum_count = None):
 
     return featured_hc_list
 
-def Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_structures, return_fuzzy_bp_dict=False):
+def Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_structures, return_fuzzy_bp_dict=False, region_tol=None, count_tol=None):
     stem_region_dict = {key:data.Find_Stem_Region(hc_list) for key, hc_list in reversed_stem_dict.items()}
 
-    region_tol=5
-    count_tol=1./3.
+    if region_tol is None:
+        region_tol=5
+    if count_tol is None:
+        count_tol=1./3.
 
     fuzzy_stem_region_dict = {key:(i-region_tol,j+region_tol,k-region_tol,l+region_tol) for key, (i,j,k,l) in stem_region_dict.items()}
     fuzzy_stem_bp_dict = {key:set(data.Region_To_Basepairs(region)) for key, region in fuzzy_stem_region_dict.items()}
@@ -896,17 +898,18 @@ def main():
     parser.add_argument(metavar="sequence_file.fasta",
             dest="sequence_file")
     parser.add_argument("--sample_file")
-    parser.add_argument("--sampler", 
-            choices=['RNAstructure','RNAlib'], 
-            default='RNAlib')
+    parser.add_argument("--sample_format",
+            choices=["dot","ct"],
+            default="dot")
+    parser.add_argument("--RNAstructure_location")
     parser.add_argument("--sample_count",
             type=int,
             default=1000)
     parser.add_argument("--sample_seed",
             type=int)
-    parser.add_argument("--output_style",
-            choices=["tree","hasse"],
-            default="tree")
+    #parser.add_argument("--output_style",
+    #        choices=["tree","hasse"],
+    #        default="tree")
     parser.add_argument("--feature_type",
             choices=["selected_helix_classes", "stem_classes"],
             default="stem_classes")
@@ -914,9 +917,9 @@ def main():
             action="store_true")
     parser.add_argument("--consistent_helix_indexing",
             action="store_true")
-    parser.add_argument("--frequency_format",
-            choices=["counts","percentages","decimals"],
-            default="counts")
+    #parser.add_argument("--frequency_format",
+    #        choices=["counts","percentages","decimals"],
+    #        default="counts")
     parser.add_argument("--contingency_node_proportion")
     parser.add_argument("--helix_class_selection_cutoff_count",
             type=int)
@@ -928,10 +931,9 @@ def main():
             type=int)
     parser.add_argument("--fuzzy_stems_bp_count_margin",
             type=float)
+    parser.add_argument("--sequence_name")
 
     args = parser.parse_args()
-
-    sequence_file = args.sequence_file 
 
     if args.sample_seed is not None:
         seed = args.sample_seed
@@ -939,15 +941,41 @@ def main():
         from random import randrange
         seed = randrange(99999999)
 
-    data.Init_RNA_Seed(seed)
+    if args.sample_file is None and args.RNAstructure_location is None:
+        data.Init_RNA_Seed(seed)
 
-    data_dict = data.load_sample_sequence(
-        sequence_file, 
-        seed=seed,
-        structure_count=int(args.sample_count),
-        cache_folder="cached_structures")
+    if args.sample_file is None:
+        data_dict = data.load_sample_sequence(
+            args.sequence_file, 
+            seed=seed,
+            structure_count=int(args.sample_count),
+            cache_folder="cached_structures")
+    else:
+        data_dict = {}
+        data_dict["sequence"], data_dict["name"] = data.Read_FASTA(args.sequence_file)
+
+        if args.sample_format == "dot":
+            dot_structures = data.Read_Dot_Structures(args.sample_file)
+            data_dict["structures"] = [data.Dot_to_BP(dot_struct) for dot_struct in dot_structures]
+            data_dict["sample_files"] = args.sample_file
+        elif args.sample_format == "ct":
+            data_dict["structures"] = [data.Basepairs_To_Helices(bp_list) 
+                    for bp_list in data.Read_CT(args.sample_file)[0]]
+            dot_structures = [data.To_Dot_Bracket(struct, len(data_dict["sequence"]))
+                for struct in data_dict["structures"]] 
+
+            seq_hash = data.get_hash(data_dict["sequence"])
+
+            from pathlib import Path
+            Path("cached_structures").mkdir(parents=True, exist_ok=True)
+            cache_file = Path.joinpath(Path("cached_structures"), 
+                "{}_{}_{}_imported.dot_struct".format(data_dict["name"], seq_hash, len(dot_structures)))
+
+            data.Write_Dot_Structures(cache_file.resolve(), data_dict["sequence"], dot_structures)
+            data_dict["sample_files"] = cache_file.resolve()
 
     sequence_name = data_dict["name"]
+
     sequence = data_dict["sequence"]
 
     outfile_root = "decision_tree_" + sequence_name
@@ -998,7 +1026,9 @@ def main():
                                     for structure in feat_helix_class_structures]
 
         if not args.disable_fuzzy_stem_counts:
-            fuzzy_stem_structures = Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_structures)
+            fuzzy_stem_structures = Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_structures,
+                    region_tol = args.fuzzy_stems_region_dilation,
+                    count_tol=args.fuzzy_stems_bp_count_margin)
 
             diff_count = sum(1 for fuzz, strict in zip(fuzzy_stem_structures, feat_stem_structures) if fuzz != strict)
             print("Number changed with fuzzy criterion: ", diff_count)
