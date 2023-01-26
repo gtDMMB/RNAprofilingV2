@@ -3,3 +3,5 @@ cached_structures
 output
 *.swp
 *.pyc
+build/
+dist/
