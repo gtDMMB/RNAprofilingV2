@@ -103,7 +103,7 @@ def _generate_helix_class_labels_impl(sequence, min_k=1, hairpin_length=3):
         helix_class_energy(*helix, sequence))
 
     helix_class_list = [(i + 1, j + 1, k) for i, j, k in helix_class_list]
-    helix_class_dict = {helix:idx+1 for idx, helix in enumerate(helix_class_list)}
+    helix_class_dict = {helix:str(idx+1) for idx, helix in enumerate(helix_class_list)}
 
     return helix_class_dict
 

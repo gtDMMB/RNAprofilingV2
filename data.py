@@ -180,17 +180,18 @@ def get_hash(sequence):
 def load_sample_sequence(
         sequence_file, 
         repeat_count=1, 
-        repeat_idxs=None,
+        seed=None,
         structure_count=1000, 
-        cache_folder="cached_structures"):
+        cache_folder=None):
     from pathlib import Path
 
-    Path(cache_folder).mkdir(parents=True, exist_ok=True)
+    if cache_folder is not None:
+        Path(cache_folder).mkdir(parents=True, exist_ok=True)
 
     sequence, sequence_name = Read_FASTA(sequence_file)
 
-    if repeat_idxs is None:
-        repeat_idxs = range(repeat_count)
+    if seed is None:
+        seed = "NA"
 
     seq_hash = get_hash(sequence)
 
@@ -198,28 +199,29 @@ def load_sample_sequence(
         "sequence": sequence,
         "name": sequence_name,
         "hash": seq_hash,
-        "structures": {},
-        "sample_files":{}}
+        "seed": seed,
+        "structures": None,
+        "sample_files": None}
 
-    for repeat in repeat_idxs:
-
+    cache_file = Path("")
+    if cache_folder is not None:
         cache_file = Path.joinpath(Path(cache_folder), 
-            "{}_{}_{}_{}.dot_struct".format(sequence_name, seq_hash, structure_count, repeat))
+            "{}_{}_{}_{}.dot_struct".format(sequence_name, seq_hash, structure_count, seed))
 
-        if cache_file.is_file():
-            #structures = Read_CT(cache_file.resolve())
-            dot_structures = Read_Dot_Structures(cache_file.resolve())
-            structures = [Dot_to_BP(dot_struct) for dot_struct in dot_structures]
-        else:
-            dot_structures = Sample_Sequence(sequence, structure_count)
-            #Write_CT(cache_file.resolve(), sequence, sequence_name, structures)
+    if cache_file.is_file():
+        dot_structures = Read_Dot_Structures(cache_file.resolve())
+        structures = [Dot_to_BP(dot_struct) for dot_struct in dot_structures]
+    else:
+        dot_structures = Sample_Sequence(sequence, structure_count)
+        structures = [Dot_to_BP(dot_struct) for dot_struct in dot_structures]
+
+        if cache_folder is not None:
             Write_Dot_Structures(cache_file.resolve(), sequence, dot_structures)
-            structures = [Dot_to_BP(dot_struct) for dot_struct in dot_structures]
 
-        structures = tuple([structures, list(sequence)])
+    result_dict["structures"] = structures
 
-        result_dict["structures"][repeat] = structures
-        result_dict["sample_files"][repeat] = cache_file
+    if cache_folder is not None:
+        result_dict["sample_files"] = cache_file
 
     return result_dict
 
@@ -553,7 +555,7 @@ def alphabetical_label(x):
 
     return "".join(digits)
 
-def Build_Edge_List(helix_class_list):
+def Build_Edge_List(helix_class_list, gap=(2,2)):
     edge_list = []
 
     for helix_a in helix_class_list:
@@ -561,14 +563,17 @@ def Build_Edge_List(helix_class_list):
             if helix_a == helix_b:
                 continue
 
-            if stemmable(helix_a, helix_b):
+            if stemmable(helix_a, helix_b, gap):
                 edge_list.append((helix_a, helix_b))
 
     return edge_list
 
-def Find_Stems(featured_helix_class_list, featured_labels, return_diameters=False):
+def Find_Stems(featured_helix_class_list, featured_labels, return_diameters=False, gap=None):
 
-    edge_list = Build_Edge_List(featured_helix_class_list)
+    if gap is not None:
+        edge_list = Build_Edge_List(featured_helix_class_list, gap)
+    else:
+        edge_list = Build_Edge_List(featured_helix_class_list)
 
     G = nx.Graph()
     G.add_edges_from(edge_list)

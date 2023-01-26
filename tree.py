@@ -9,19 +9,15 @@ from structure_dataframe import StructureDataframe
 def rev_shift(helix):
     return (helix[0] - 1, helix[1] - 1, helix[2])
 
-def generate_leaf_radial_diagrams(folder, G, helix_structures, helix_class_labels, sequence):
+def generate_leaf_radial_diagrams(folder, G, helix_structures, sequence):
     
     import draw
     from collections import Counter
-
-    reversed_label_map = data.flip_dict(helix_class_labels)
 
     for node, node_data in G.nodes(data=True):
         if G.out_degree(node) != 0:
             continue
 
-        print("Radial diagram ", node)
-        
         structure_idxs = node_data["structure_idxs"]
         node_structures = [tuple(helix_structures[idx]) for idx in structure_idxs]
 
@@ -66,8 +62,6 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
 
     for node, node_data in G.nodes(data=True):
 
-        print("arc diagram " + str(node))
-        
         if G.nodes[node]["type"] != "root":
             parent_node = next(G.predecessors(node))
         else:
@@ -77,8 +71,6 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
 
         path_nodes = nx.ancestors(G, node)
         
-        #path_nodes.add(node)
-
         parent_implications = sum((G.edges[edge]["decision"] for edge in G.subgraph(parent_edges).edges 
             if "decision" in G.edges[edge]), [])
         implications = sum((G.edges[edge]["decision"] for edge in G.subgraph(path_nodes).edges), [])
@@ -96,6 +88,7 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
 
         keep_helices = set()
         for feature in negative_features + important_features + indep_features + t_implications:
+
             keep_helices.update(
                 [rev_shift(helix) for helix in reversed_label_map[feature]])
 
@@ -155,9 +148,9 @@ def prepare_agraph_attrs_new(G):
                 edge_data["style"] = "dashed"
             else:
                 feature_list = []
-                present_features = ",".join([feature for feature, present in edge_data["decision"]
+                present_features = ",".join([str(feature) for feature, present in edge_data["decision"]
                                     if present])
-                absent_features =  ",".join(["¬" + feature for feature, present in edge_data["decision"]
+                absent_features =  ",".join(["¬" + str(feature) for feature, present in edge_data["decision"]
                                     if not present])
                 
                 sep = ","
@@ -272,7 +265,7 @@ def save_leaf_data(filename, G):
         f.write(json_data)
         f.write("\n`;")
 
-def save_indep_node_data(filename, G, feature_df, label_structures, label_dict, reversed_stem_label_dict):
+def save_indep_node_data(filename, G, feature_df, label_dict, reversed_stem_label_dict):
 
     import json
     import math
@@ -287,7 +280,6 @@ def save_indep_node_data(filename, G, feature_df, label_structures, label_dict, 
         parent_node = next(G.predecessors(node))
         if G.nodes[parent_node]["type"] != "contingency":
             continue
-        print("Contingency: ", node)
 
         decision_count = len(G.nodes[parent_node]["decision"])
         current_df = feature_df.get_original_array()[G.nodes[node]["structure_idxs"]]
@@ -307,10 +299,6 @@ def save_indep_node_data(filename, G, feature_df, label_structures, label_dict, 
             np.expand_dims(values, -1)
         freq_dict = {tuple(value):count/transformed_array.shape[0] for value, count in zip(values, counts)}
 
-        print(values)
-        print(counts)
-        print(freq_dict)
-
         row_decisions, col_decisions = [], []
         if decision_count <= 4:
             col_decisions = G.nodes[parent_node]["decision"][:math.floor(decision_count / 2)]
@@ -327,15 +315,11 @@ def save_indep_node_data(filename, G, feature_df, label_structures, label_dict, 
         row_labels = list(itertools.product(*([[True, False]] * len(row_decisions))))
         col_labels = list(itertools.product(*([[True, False]] * len(col_decisions))))
 
-        print(crosstab_list)
-
         for idx,row_decision_present in enumerate(row_labels):
             for row_decision_idx, present in enumerate(row_decision_present):
-                print(row_decisions[row_decision_idx][int(present)])
                 label = ",".join(row_decisions[row_decision_idx][int(not present)])
                 if label == "":
-                    label = ",".join("¬" + feat for feat in row_decisions[row_decision_idx][int(present)])
-                print(label)
+                    label = ",".join("¬" + str(feat) for feat in row_decisions[row_decision_idx][int(present)])
                 crosstab_list[idx + len(col_decisions)][row_decision_idx] = label 
 
         for idx,col_decision_present in enumerate(col_labels):
@@ -354,8 +338,6 @@ def save_indep_node_data(filename, G, feature_df, label_structures, label_dict, 
             crosstab_list[row_idx + len(col_decisions)][col_idx + len(row_decisions)] = frequency
 
         table_dict[node] = crosstab_list
-
-        print(crosstab_list)
 
     json_data = json.dumps(table_dict, indent=2)
     with open(filename, "w") as f:
@@ -805,7 +787,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
     for child in tree.successors(node):
         _merge_complete_binary_trees_new_recr(child, tree, distance_dict)
 
-def merge_complete_binary_trees_new(tree):
+def merge_complete_binary_trees_new(tree, fuzzy_cutoff = None):
     
     for n, d in tree.in_degree():
         if d == 0:
@@ -814,13 +796,19 @@ def merge_complete_binary_trees_new(tree):
     p = nx.shortest_path_length(tree)
     distance_dict = {source:dic for source, dic in p}
 
-    _merge_complete_binary_trees_new_recr(root, tree, distance_dict)
+    if fuzzy_cutoff is None: 
+        _merge_complete_binary_trees_new_recr(root, tree, distance_dict)
+    else:
+        _merge_complete_binary_trees_new_recr(root, tree, distance_dict, fuzzy_cutoff = fuzzy_cutoff - 0.0001)
 
-def get_Featured_Helix_Classes(hc_structures):
+def get_Featured_Helix_Classes(hc_structures, minimum_count = None):
 
     hc_counts = data.count_features(hc_structures)
     hc_list = sorted(hc_counts.keys(),
             key = lambda helix_class: -hc_counts[helix_class])
+
+    if minimum_count is not None:
+        return [hc for hc in hc_list if hc_counts[hc] >= minimum_count]
 
     entropy_cutoff_idx, _ = data.cutoff_objects_by_entropy(
         hc_list, hc_counts)
@@ -849,7 +837,7 @@ def Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_stru
 
     return fuzzy_stem_structures
 
-def build_and_clean_tree(dataframe, min_node_freq, auxilary_dataframe_list = None, auxilary_dataframe_names = None):
+def build_and_clean_tree(dataframe, min_node_freq, auxilary_dataframe_list = None, auxilary_dataframe_names = None, proportion_present = None):
     if auxilary_dataframe_list is None:
         auxilary_dataframe_list = []
         auxilary_dataframe_names = []
@@ -858,7 +846,7 @@ def build_and_clean_tree(dataframe, min_node_freq, auxilary_dataframe_list = Non
 
     label_binary_decisions(tree)
 
-    merge_complete_binary_trees_new(tree)
+    merge_complete_binary_trees_new(tree, proportion_present)
 
     augment_tree_counts(tree, dataframe, "count", "structure_idxs")
     for aux_dataframe, aux_name in zip(auxilary_dataframe_list, auxilary_dataframe_names):
@@ -912,7 +900,8 @@ def main():
             choices=['RNAstructure','RNAlib'], 
             default='RNAlib')
     parser.add_argument("--sample_count",
-            type=int)
+            type=int,
+            default=1000)
     parser.add_argument("--sample_seed",
             type=int)
     parser.add_argument("--output_style",
@@ -921,8 +910,8 @@ def main():
     parser.add_argument("--feature_type",
             choices=["selected_helix_classes", "stem_classes"],
             default="stem_classes")
-    parser.add_argument("--fuzzy_stem_counts",
-            action="store_false")
+    parser.add_argument("--disable_fuzzy_stem_counts",
+            action="store_true")
     parser.add_argument("--consistent_helix_indexing",
             action="store_true")
     parser.add_argument("--frequency_format",
@@ -944,16 +933,18 @@ def main():
 
     sequence_file = args.sequence_file 
 
-    seed = 1
     if args.sample_seed is not None:
         seed = args.sample_seed
+    else:
+        from random import randrange
+        seed = randrange(99999999)
 
     data.Init_RNA_Seed(seed)
 
     data_dict = data.load_sample_sequence(
         sequence_file, 
-        repeat_idxs=[seed],
-        structure_count=1000,
+        seed=seed,
+        structure_count=int(args.sample_count),
         cache_folder="cached_structures")
 
     sequence_name = data_dict["name"]
@@ -961,59 +952,81 @@ def main():
 
     outfile_root = "decision_tree_" + sequence_name
 
-    basepair_structures = next(iter(data_dict["structures"].values()))[0]
-    sample_file = next(iter(data_dict["sample_files"].values()))
+    basepair_structures = data_dict["structures"]
+    sample_file = data_dict["sample_files"]
 
     helix_structures = [data.Basepairs_To_Helices(structure) 
                         for structure in basepair_structures]
     helix_class_structures = [data.Helices_To_Helix_Classes(structure, sequence) 
                         for structure in helix_structures]
 
-    featured_classes = get_Featured_Helix_Classes(helix_class_structures)
+    featured_classes = get_Featured_Helix_Classes(helix_class_structures, 
+            minimum_count=args.helix_class_selection_cutoff_count)
 
     helix_class_counts = data.count_features(helix_class_structures)
     helix_classes = sorted(helix_class_counts.keys(),
             key = lambda helix_class: -helix_class_counts[helix_class])
 
-    #helix_labels = Enumerate.generate_helix_class_labels(sequence, min_k=1, hairpin_length=3)
-    helix_labels = {helix_class:(idx + 1) for idx, helix_class in enumerate(helix_classes)}
+    if args.consistent_helix_indexing:
+        helix_labels = Enumerate.generate_helix_class_labels(sequence, min_k=1, hairpin_length=3)
+    else:
+        helix_labels = {helix_class:str(idx + 1) for idx, helix_class in enumerate(helix_classes)}
     reversed_label_dict = data.flip_dict(helix_labels)
 
-    featured_labels = {hc:helix_labels[hc] 
+    selected_labels = {hc:helix_labels[hc] 
             for hc in featured_classes}
-
-    stem_dict = data.Find_Stems(featured_classes, featured_labels)
-    reversed_stem_dict = data.flip_dict(stem_dict)
 
     helix_class_structures = [data.Helices_To_Helix_Classes(structure, sequence) 
                                 for structure in helix_structures]
     feat_helix_class_structures = [data.Helix_Classes_To_Profiles(structure, featured_classes) 
                                 for structure in helix_class_structures]
-    feat_stem_structures = [data.Helix_Classes_To_Stems(structure, stem_dict)
-                                for structure in feat_helix_class_structures]
 
-    fuzzy_stem_structures = Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_structures)
+    hc_label_structures = [[helix_labels[helix] for helix in struct] 
+                        for struct in feat_helix_class_structures]
 
-    label_structures = [[helix_labels[helix] for helix in struct] 
-                        for struct in helix_class_structures]
+    if args.feature_type == "stem_classes":
 
-    stem_counts = data.count_features(feat_stem_structures)
-    fuzzy_stem_counts = data.count_features(fuzzy_stem_structures)
+        if args.maximum_stem_gap is not None:
+            stem_dict = data.Find_Stems(
+                    featured_classes, selected_labels, gap=(args.maximum_stem_gap, args.maximum_stem_gap))
+        else:
+            stem_dict = data.Find_Stems(
+                    featured_classes, selected_labels)
+        reversed_stem_dict = data.flip_dict(stem_dict)
 
-    feat_stem_dataframe = StructureDataframe(feat_stem_structures)
-    fuzzy_stem_dataframe = StructureDataframe(fuzzy_stem_structures)
+        feat_stem_structures = [data.Helix_Classes_To_Stems(structure, stem_dict)
+                                    for structure in feat_helix_class_structures]
 
-    diff_count = sum(1 for fuzz, strict in zip(fuzzy_stem_structures, feat_stem_structures) if fuzz != strict)
-    print("Number changed with fuzzy criterion: ", diff_count)
+        if not args.disable_fuzzy_stem_counts:
+            fuzzy_stem_structures = Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_structures)
 
-    fuzzy_stem_dataframe_counts_dict = {tuple(key): value for key, value in zip(fuzzy_stem_dataframe, fuzzy_stem_dataframe.counts)}
-    _, min_node_freq = data.cutoff_objects_by_entropy(fuzzy_stem_dataframe_counts_dict.keys(), fuzzy_stem_dataframe_counts_dict)
+            diff_count = sum(1 for fuzz, strict in zip(fuzzy_stem_structures, feat_stem_structures) if fuzz != strict)
+            print("Number changed with fuzzy criterion: ", diff_count)
 
-    print(sorted(fuzzy_stem_dataframe_counts_dict.values()))
+            feature_structures = fuzzy_stem_structures
+        else:
+            feature_structures = feat_stem_structures
+        hc_feature_labels = stem_dict
+    else:
+        feature_structures = hc_label_structures
+        hc_feature_labels = selected_labels
+
+    reversed_hc_feature_labels = data.flip_dict(hc_feature_labels)
+
+    feature_counts = data.count_features(feature_structures)
+    feature_dataframe = StructureDataframe(feature_structures)
+
+    feature_dataframe_counts_dict = {tuple(key): value 
+            for key, value in zip(feature_dataframe, feature_dataframe.counts)}
+    if args.profile_selection_cutoff_count is None:
+        _, min_node_freq = data.cutoff_objects_by_entropy(
+                feature_dataframe_counts_dict.keys(), feature_dataframe_counts_dict)
+    else:
+        min_node_freq = args.profile_selection_cutoff_count
 
     print("Min node freq: ", min_node_freq)
 
-    tree = build_and_clean_tree(fuzzy_stem_dataframe, min_node_freq, [feat_stem_dataframe], ["strict"])
+    tree = build_and_clean_tree(feature_dataframe, min_node_freq, proportion_present = args.contingency_node_proportion)
 
     prepare_agraph_attrs_new(tree)
     tree_agraph = nx.nx_agraph.to_agraph(tree)
@@ -1040,36 +1053,34 @@ def main():
     tree_agraph.write(output_data_folder + "tree.dot")
 
     coverage = get_coverage_count(tree)
-    coverage_prop = coverage / fuzzy_stem_dataframe.shape[0]
+    coverage_prop = coverage / sum(feature_dataframe.counts)
+
+    print("Structure coverage proportion: ", coverage_prop)
 
     ##########################################
     generate_node_arc_diagrams(
         arc_diagram_folder,
         tree,
         helix_structures,
-        stem_dict,
+        hc_feature_labels,
         sequence)
          
     generate_leaf_radial_diagrams(
         radial_diagram_folder,
         tree,
         helix_structures,
-        stem_dict,
         sequence)
 
     #############################################
     
-    print("Fuzzy ", fuzzy_stem_counts)
-    print(len(fuzzy_stem_structures))
-
     save_stem_legend_data(
         output_data_folder + "legendJSON.js", 
-        reversed_stem_dict, 
-        fuzzy_stem_counts, 
+        reversed_hc_feature_labels, 
+        feature_counts, 
         helix_class_counts, 
         helix_labels)
     save_leaf_data(output_data_folder + "leafJSON.js", tree)
-    save_indep_node_data(output_data_folder + "indepNodeJSON.js", tree, fuzzy_stem_dataframe, label_structures, helix_labels, reversed_stem_dict)
+    save_indep_node_data(output_data_folder + "indepNodeJSON.js", tree, feature_dataframe, helix_labels, reversed_hc_feature_labels)
     save_node_sample_indices(output_data_folder + "nodeSampleIndicesJSON.js", tree, helix_structures)
 
     import subprocess
