@@ -99,10 +99,8 @@ def Init_RNA_Seed(seed=''):
     #seed_set = True
 
 def Sample_Sequence(sequence, structure_count=100):
+    # load RNAlib library python bindings (associated with the ViennaRNA packages)
     import RNA
-
-    #if seed_set == False:
-    #    print("Warning: RNAlib seed not set")
 
     # create model details
     md = RNA.md()
@@ -125,6 +123,32 @@ def Sample_Sequence(sequence, structure_count=100):
     structures = fc.pbacktrack(structure_count)
 
     return structures
+
+def Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, output_file):
+        import subprocess
+        from pathlib import Path
+
+        data_tables = Path(RNAstructure_location) / "data_tables"
+        stochastic_program = Path(RNAstructure_location) / "exe/stochastic"
+        ct_file = Path("./.tmp.ct")
+
+        subprocess.run([
+            stochastic_program.resolve(), 
+            "--sequence",
+            "--seed", str(seed), 
+            sequence_file, ct_file.resolve()],
+            env=dict(os.environ,DATAPATH=data_tables.resolve()))
+
+        structures, sequence_tuple = Read_CT(ct_file.resolve())
+
+        if output_file is not None:
+            dot_structures = [To_Dot_Bracket(Basepairs_To_Helices(struct), len(sequence_tuple))[0]
+                for struct in structures] 
+
+            Write_Dot_Structures(output_file, "".join(sequence_tuple), dot_structures)
+
+        return structures
+
 
 '''
 def Load_Sample_Sequences_In_Folder(folder, repeat_count=1, structure_count=1000, cache_folder="cached_structures"):
@@ -182,7 +206,8 @@ def load_sample_sequence(
         repeat_count=1, 
         seed=None,
         structure_count=1000, 
-        cache_folder=None):
+        cache_folder=None,
+        RNAstructure_location = None):
     from pathlib import Path
 
     if cache_folder is not None:
@@ -203,20 +228,28 @@ def load_sample_sequence(
         "structures": None,
         "sample_files": None}
 
+    if RNAstructure_location is None:
+        sampler = "RNAlib"
+    else:
+        sampler = "RNAstructure"
+
     cache_file = Path("")
     if cache_folder is not None:
         cache_file = Path.joinpath(Path(cache_folder), 
-            "{}_{}_{}_{}.dot_struct".format(sequence_name, seq_hash, structure_count, seed))
+            "{}_{}_{}_{}_{}.dot_struct".format(sequence_name, seq_hash, structure_count, seed, sampler))
 
     if cache_file.is_file():
         dot_structures = Read_Dot_Structures(cache_file.resolve())
         structures = [Dot_to_BP(dot_struct) for dot_struct in dot_structures]
-    else:
+    elif RNAstructure_location is None:
         dot_structures = Sample_Sequence(sequence, structure_count)
         structures = [Dot_to_BP(dot_struct) for dot_struct in dot_structures]
 
         if cache_folder is not None:
             Write_Dot_Structures(cache_file.resolve(), sequence, dot_structures)
+    else:
+        structures = Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, cache_file.resolve())
+
 
     result_dict["structures"] = structures
 

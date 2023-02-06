@@ -62,10 +62,7 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
 
     for node, node_data in G.nodes(data=True):
 
-        if G.nodes[node]["type"] != "root":
-            parent_node = next(G.predecessors(node))
-        else:
-            parent_node = None
+        parent_node = next(G.predecessors(node), None)
 
         parent_edges = list(G.predecessors(node)) + [node]
 
@@ -686,7 +683,7 @@ def get_basepair_coverage(structure_list, basepair_structure_list, feature_to_ba
     return total_covered_basepairs
 
 def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutoff=0.74):
-    
+
     distance_to_leaves = None
     present_leaf_count = 0
     min_leaf_idx = None
@@ -785,7 +782,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
 
 
     for child in tree.successors(node):
-        _merge_complete_binary_trees_new_recr(child, tree, distance_dict)
+        _merge_complete_binary_trees_new_recr(child, tree, distance_dict, fuzzy_cutoff = fuzzy_cutoff)
 
 def merge_complete_binary_trees_new(tree, fuzzy_cutoff = None):
     
@@ -827,6 +824,7 @@ def Fuzz_Stem_Structures(reversed_stem_dict, feat_stem_structures, basepair_stru
 
     fuzzy_stem_region_dict = {key:(i-region_tol,j+region_tol,k-region_tol,l+region_tol) for key, (i,j,k,l) in stem_region_dict.items()}
     fuzzy_stem_bp_dict = {key:set(data.Region_To_Basepairs(region)) for key, region in fuzzy_stem_region_dict.items()}
+
 
     mean_bp_dict = average_region_bps(feat_stem_structures, fuzzy_stem_bp_dict, basepair_structures)
     fuzzy_stem_count_cutoffs = {key:mean_count*count_tol for key, mean_count in mean_bp_dict.items()}
@@ -917,10 +915,12 @@ def main():
             action="store_true")
     parser.add_argument("--consistent_helix_indexing",
             action="store_true")
-    #parser.add_argument("--frequency_format",
+    #parser.add_argument("--frequency_format", 
     #        choices=["counts","percentages","decimals"],
     #        default="counts")
-    parser.add_argument("--contingency_node_proportion")
+    parser.add_argument("--contingency_node_proportion",
+            type=float,
+            default=None)
     parser.add_argument("--helix_class_selection_cutoff_count",
             type=int)
     parser.add_argument("--profile_selection_cutoff_count",
@@ -931,7 +931,9 @@ def main():
             type=int)
     parser.add_argument("--fuzzy_stems_bp_count_margin",
             type=float)
-    parser.add_argument("--sequence_name")
+    parser.add_argument("--sequence_name",
+            default=None,
+            type=str)
 
     args = parser.parse_args()
 
@@ -949,7 +951,8 @@ def main():
             args.sequence_file, 
             seed=seed,
             structure_count=int(args.sample_count),
-            cache_folder="cached_structures")
+            cache_folder="cached_structures",
+            RNAstructure_location = args.RNAstructure_location)
     else:
         data_dict = {}
         data_dict["sequence"], data_dict["name"] = data.Read_FASTA(args.sequence_file)
@@ -959,9 +962,9 @@ def main():
             data_dict["structures"] = [data.Dot_to_BP(dot_struct) for dot_struct in dot_structures]
             data_dict["sample_files"] = args.sample_file
         elif args.sample_format == "ct":
-            data_dict["structures"] = [data.Basepairs_To_Helices(bp_list) 
-                    for bp_list in data.Read_CT(args.sample_file)[0]]
-            dot_structures = [data.To_Dot_Bracket(struct, len(data_dict["sequence"]))
+            data_dict["structures"], sequence_tuple = data.Read_CT(args.sample_file)
+            dot_structures = [data.To_Dot_Bracket(
+                    data.Basepairs_To_Helices(struct), len(data_dict["sequence"]))[0]
                 for struct in data_dict["structures"]] 
 
             seq_hash = data.get_hash(data_dict["sequence"])
@@ -974,7 +977,10 @@ def main():
             data.Write_Dot_Structures(cache_file.resolve(), data_dict["sequence"], dot_structures)
             data_dict["sample_files"] = cache_file.resolve()
 
-    sequence_name = data_dict["name"]
+    if args.sequence_name is None:
+        sequence_name = data_dict["name"]
+    else:
+        sequence_name = args.sequence_name
 
     sequence = data_dict["sequence"]
 
