@@ -1122,9 +1122,9 @@ def main():
     import subprocess
     subprocess.run(["dot","-T","svg","-o", output_data_folder + "tree.svg",output_data_folder + "tree.dot"])
 
-    with open(output_data_folder + "treeSVG.js","w") as f:
+    with open(output_data_folder + "treeSVG.js","w",encoding="utf-8") as f:
         f.write("var treeTXT = `\n")
-        with open(output_data_folder + "tree.svg","r") as svg_file:
+        with open(output_data_folder + "tree.svg","r",encoding="utf-8") as svg_file:
             svg_text = svg_file.read()
         f.write(svg_text)
         f.write("\n`;")
