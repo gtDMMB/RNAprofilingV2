@@ -84,15 +84,15 @@ class StructureDataframe:
             return (np.count_nonzero(self._index_mask), np.count_nonzero(self._column_mask))
         return self._array.shape
 
-    def subset(self, implication_list, frequency_cutoff=0):
+    def subset(self, implication_list = None, frequency_cutoff=0):
         number_at_or_above_cutoff = self._counts.shape[0] - np.searchsorted(self._counts[::-1], frequency_cutoff, side="left") 
         
         res = copy(self)
         res._array = None
         res._index = None
 
-        if len(implication_list) == 0:
-            return res
+        if implication_list is None:
+            implication_list = []
 
         keep_rows = [self._structures[:number_at_or_above_cutoff,self._column_idx_dict[feature]] == value
             for (feature, value) in implication_list]

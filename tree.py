@@ -15,7 +15,9 @@ def generate_leaf_radial_diagrams(folder, G, helix_structures, sequence):
     from collections import Counter
 
     for node, node_data in G.nodes(data=True):
-        if G.out_degree(node) != 0:
+        if "type" in node_data and node_data["type"] not in ["selected_profile", "contingency"]:
+            continue
+        if "type" not in node_data:
             continue
 
         structure_idxs = node_data["structure_idxs"]
@@ -75,11 +77,11 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
         f_implications = [feat for feat, present in implications if not present]
 
         negative_features, important_features, indep_features = [], [], []
-        if G.nodes[node]["type"] not in ["leaf", "root"] or (parent_node is not None and G.nodes[parent_node]["type"] != "contingency"):
+        if G.nodes[node]["type"] not in ["selected_profile", "root"] or (parent_node is not None and G.nodes[parent_node]["type"] != "contingency"):
             negative_features = [feat for feat, present in parent_implications if not present]
             important_features = [feat for feat, present in parent_implications if present]
 
-        elif G.nodes[node]["type"] == "leaf":
+        elif G.nodes[node]["type"] == "selected_profile":
             indep_features = sum((list(decision[0]) + list(decision[1])
                 for decision in parent_implications), [])
 
@@ -133,8 +135,7 @@ def get_decision_text(decision_list):
 
     return ", ".join("(" + text + ")" for text in decision_text_list)
 
-
-def prepare_agraph_attrs_new(G):
+def prepare_agraph_attrs(G, include_profiles = False):
     for edge in G.edges(data = True):
         edge_data = edge[2]
         edge_data["id"] = str(edge[0]) + "_" + str(edge[1])
@@ -168,21 +169,22 @@ def prepare_agraph_attrs_new(G):
         node_data["id"] = str(node[0])
 
         label_rows = []
-        if "count_old" in node_data:
-            label_rows.append(str(node_data["count_old"]))
+        if include_profiles and "bracket" in node_data:
+            label_rows.append(node_data["bracket"])
+        elif include_profiles:
+            label_rows.append(",".join(str(x) for x in node_data["features"]))
+        if "count_old" in node_data and "count" in node_data:
+            label_rows.append(str(node_data["count"]) + " [" + str(node_data["count_old"]) + "]")
         elif "count" in node_data:
             label_rows.append(str(node_data["count"]))
 
         if "type" in node_data and node_data["type"] == "contingency":
             node_data["style"] = "dashed"
 
-        if G.out_degree(node[0]) == 0:
+        if "type" in node_data and node_data["type"] in ["selected_profile", "contingency"]:
             leaf_idx += 1
             roman_numeral = roman.toRoman(leaf_idx)
-            if "count_old" in node_data:
-                label_rows.append(roman_numeral + " - " + str(node_data["count"]))
-            else:
-                label_rows.append(roman_numeral)
+            label_rows.append(roman_numeral)
             node_data["shape"] = "box"
             node_data["leaf_label"] = roman_numeral
 
@@ -245,7 +247,9 @@ def save_leaf_data(filename, G):
 
     file_data = []
     for node in G.nodes():
-        if G.out_degree(node) != 0:
+        if "type" in G.nodes[node] and G.nodes[node]["type"] not in ["selected_profile", "contingency"]:
+            continue
+        if "type" not in G.nodes[node]:
             continue
 
         label = G.nodes[node]["leaf_label"]
@@ -426,7 +430,7 @@ def _build_tree_new_recr(tree, current_node, current_samples, decision_history_p
         tree.add_node(leaf_node)
         tree.add_edge(current_node, leaf_node)
 
-        tree.nodes[leaf_node]["type"] = "leaf"
+        tree.nodes[leaf_node]["type"] = "selected_profile"
 
         return
 
@@ -691,7 +695,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
         if "type" not in tree.nodes[child]:
             continue
 
-        if tree.nodes[child]["type"] != "leaf":
+        if tree.nodes[child]["type"] != "selected_profile":
             continue
 
         if distance_to_leaves is None:
@@ -729,7 +733,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
 
         if np.all(feature_counts == 1):
 
-            leaves = [node for node in nx.descendants(tree, node) if tree.nodes[node]["type"] == "leaf"]
+            leaves = [node for node in nx.descendants(tree, node) if tree.nodes[node]["type"] == "selected_profile"]
 
             #print("handling leaves")
 
@@ -758,7 +762,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
             #print(leaf_implications)
 
             tree.remove_nodes_from(node for node in nx.descendants(tree, node) 
-                                    if tree.nodes[node]["type"] != "leaf")
+                                    if tree.nodes[node]["type"] != "selected_profile")
 
             tree.nodes[node]["type"] = "contingency"
             tree.nodes[node]["decision"] = list(decision if len(decision[0]) > 0 else tuple(reversed(decision)) 
@@ -776,7 +780,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
                 tree.add_edge(node, new_leaf)
                 tree.edges[node, new_leaf]["decision"] = implication
 
-                tree.nodes[new_leaf]["type"] = "leaf"
+                tree.nodes[new_leaf]["type"] = "selected_profile"
 
             return
 
@@ -871,13 +875,71 @@ def remove_empty_forced_edges(tree, ignore_leaves=True):
             continue
         if "decision" in tree.edges[edge] and tree.edges[edge]["decision"] != []:
             continue
-        if ignore_leaves and tree.nodes[edge[1]]["type"] == "leaf":
+        if ignore_leaves and tree.nodes[edge[1]]["type"] == "selected_profile":
             continue
 
         contract_edges.append(edge)
 
     for edge in reversed(sorted(contract_edges)):
         nx.contracted_nodes(tree, edge[0], edge[1], copy=False, self_loops=False)
+
+def build_hasse_diagram(dataframe, min_node_freq, helix_structures = None, helix_class_labels = None, sequence = None):
+    selected_profiles = dataframe.subset(frequency_cutoff = min_node_freq)
+
+    featured_profiles = []
+
+    for binary_profile in selected_profiles:
+        
+        feature_profile = [column for column, present 
+                in zip(dataframe.columns, binary_profile)
+                if present]
+        featured_profiles.append(tuple(sorted(feature_profile)))
+
+    import hasse
+
+    featured_profiles.append(())
+    hasse_diagram = hasse.build_raw_hasse_diagram(featured_profiles)
+    featured_profiles.remove(())
+
+    #add edge data
+    for edge in hasse_diagram.edges:
+        added_features = set(edge[1]) - set(edge[0])
+        hasse_diagram.edges[edge]["decision"] = [(feature, True) for feature in added_features]
+
+    #add node data
+    all_features = set(dataframe.columns)
+    for node in hasse_diagram.nodes:
+        
+        present_features = [(feature, True) for feature in node] 
+        absent_features = [(feature, False) for feature in all_features - set(node)]
+
+        partial_match_dataframe = dataframe.subset(present_features)
+        exact_match_dataframe = dataframe.subset(present_features + absent_features)
+
+        hasse_diagram.nodes[node]["count_old"] = np.sum(partial_match_dataframe.counts)
+        hasse_diagram.nodes[node]["count"] = np.sum(exact_match_dataframe.counts)
+        hasse_diagram.nodes[node]["structure_idxs"] = exact_match_dataframe.index
+        hasse_diagram.nodes[node]["features"] = node
+
+        if hasse_diagram.in_degree(node) == 0:
+            hasse_diagram.nodes[node]["type"] = "root"
+        else:
+            hasse_diagram.nodes[node]["type"] = "decision"
+
+        if node in featured_profiles:
+            hasse_diagram.nodes[node]["type"] = "selected_profile"
+
+        if helix_structures is None or helix_class_labels is None or sequence is None:
+            continue
+
+        hasse_diagram.nodes[node]["bracket"] = data.Generate_Bracket(
+                [helix_structures[idx] for idx in partial_match_dataframe.index],
+                {hc:label for hc, label in helix_class_labels.items() if label in node}, 
+                sequence)
+
+    hasse_diagram = nx.convert_node_labels_to_integers(hasse_diagram)
+
+    return hasse_diagram
 
 def main():
     import sys
@@ -905,9 +967,9 @@ def main():
             default=1000)
     parser.add_argument("--sample_seed",
             type=int)
-    #parser.add_argument("--output_style",
-    #        choices=["tree","hasse"],
-    #        default="tree")
+    parser.add_argument("--output_style",
+            choices=["tree","hasse"],
+            default="tree")
     parser.add_argument("--feature_type",
             choices=["selected_helix_classes", "stem_classes"],
             default="stem_classes")
@@ -1062,10 +1124,19 @@ def main():
 
     print("Min node freq: ", min_node_freq)
 
-    tree = build_and_clean_tree(feature_dataframe, min_node_freq, proportion_present = args.contingency_node_proportion)
+    if (args.output_style == "tree"):
+        graph = build_and_clean_tree(
+                feature_dataframe, min_node_freq, proportion_present = args.contingency_node_proportion)
 
-    prepare_agraph_attrs_new(tree)
-    tree_agraph = nx.nx_agraph.to_agraph(tree)
+    else:
+        graph = build_hasse_diagram(
+                feature_dataframe, min_node_freq,
+                helix_structures,
+                hc_feature_labels,
+                sequence)
+
+    prepare_agraph_attrs(graph,include_profiles=(args.output_style == "hasse"))
+    output_agraph = nx.nx_agraph.to_agraph(graph)
 
     output_folder = "output/"
     arc_diagram_folder = output_folder + "arc_diagram/"
@@ -1086,24 +1157,24 @@ def main():
     if not os.path.exists(output_data_folder):
         os.makedirs(output_data_folder)
 
-    tree_agraph.write(output_data_folder + "tree.dot")
+    output_agraph.write(output_data_folder + "tree.dot")
 
-    coverage = get_coverage_count(tree)
-    coverage_prop = coverage / sum(feature_dataframe.counts)
+    #coverage = get_coverage_count(tree)
+    #coverage_prop = coverage / sum(feature_dataframe.counts)
 
-    print("Structure coverage proportion: ", coverage_prop)
+    #print("Structure coverage proportion: ", coverage_prop)
 
     ##########################################
     generate_node_arc_diagrams(
         arc_diagram_folder,
-        tree,
+        graph,
         helix_structures,
         hc_feature_labels,
         sequence)
          
     generate_leaf_radial_diagrams(
         radial_diagram_folder,
-        tree,
+        graph,
         helix_structures,
         sequence)
 
@@ -1115,9 +1186,11 @@ def main():
         feature_counts, 
         helix_class_counts, 
         helix_labels)
-    save_leaf_data(output_data_folder + "leafJSON.js", tree)
-    save_indep_node_data(output_data_folder + "indepNodeJSON.js", tree, feature_dataframe, helix_labels, reversed_hc_feature_labels)
-    save_node_sample_indices(output_data_folder + "nodeSampleIndicesJSON.js", tree, helix_structures)
+    save_leaf_data(output_data_folder + "leafJSON.js", graph)
+    save_indep_node_data(output_data_folder + "indepNodeJSON.js", 
+            graph, feature_dataframe, helix_labels, reversed_hc_feature_labels)
+    save_node_sample_indices(output_data_folder + "nodeSampleIndicesJSON.js", 
+            graph, helix_structures)
 
     import subprocess
     subprocess.run(["dot","-T","svg","-o", output_data_folder + "tree.svg",output_data_folder + "tree.dot"])

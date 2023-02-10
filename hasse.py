@@ -2,7 +2,7 @@
 import networkx as nx
 from itertools import combinations
 
-def build_hasse_diagram(profile_list):
+def build_raw_hasse_diagram(profile_list):
     previous_intersection_size = 0
     intersection_profiles = set(profile_list)
 

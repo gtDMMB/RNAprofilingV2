@@ -811,7 +811,7 @@ def Generate_Bracket(helix_structures, helix_class_labels, sequence, method=None
     import rna_shape
 
     bracket_list = []
-    for structure in random.sample(helix_structures, min(25, len(helix_structures))):
+    for structure in random.sample(helix_structures, min(50, len(helix_structures))):
         local_helix_class_dict = Helices_To_Helix_Class_Dict(structure, sequence)
         local_label_dict = {helix:(helix_class_labels[local_helix_class_dict[helix]] 
                             if local_helix_class_dict[helix] in helix_class_labels else "")
