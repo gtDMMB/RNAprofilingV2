@@ -249,7 +249,7 @@ def save_stem_legend_data(
         class_data_table.append({
             "Helix Class": helix_class_labels[helix_class],
             "(i, j, k)": str(helix_class),
-            "Frequency": helix_counts[helix_class]})
+            "Exact Frequency": helix_counts[helix_class]})
 
     json_data = json.dumps(data_table)
     json_class_data = json.dumps(class_data_table)
@@ -976,7 +976,9 @@ def main():
             description = "Builds graphical representations of large samples of RNA secondary structures")
 
     parser.add_argument(metavar="sequence_file.fasta",
-            dest="sequence_file")
+            dest="sequence_file",
+            nargs="?",
+            help="Required unless a sample file with the ct format is provided")
     parser.add_argument("--sample_file")
     parser.add_argument("--sample_format",
             choices=["dot","ct"],
@@ -1019,6 +1021,15 @@ def main():
 
     args = parser.parse_args()
 
+    if not len(sys.argv) > 1:
+        parser.print_help()
+        quit()
+
+    if args.sequence_file is None:
+        if args.sample_file is None or args.sample_format != "ct":
+            print("Error sequence file not provided. Either provide a sequence file or provide a sample file with the ct format. Don't forget to specify the format using the --sample_format argument.")
+            quit()
+
     if args.sample_seed is not None:
         seed = args.sample_seed
     else:
@@ -1037,14 +1048,22 @@ def main():
             RNAstructure_location = args.RNAstructure_location)
     else:
         data_dict = {}
-        data_dict["sequence"], data_dict["name"] = data.Read_FASTA(args.sequence_file)
-
         if args.sample_format == "dot":
+            data_dict["sequence"], data_dict["name"] = data.Read_FASTA(args.sequence_file)
+
             dot_structures = data.Read_Dot_Structures(args.sample_file)
+
+            if any(len(struct)!=len(data_dict["sequence"]) for struct in dot_structures):
+                print("sampled structure length and sequence length are different. exiting")
+                exit()
+
             data_dict["structures"] = [data.Dot_to_BP(dot_struct) for dot_struct in dot_structures]
             data_dict["sample_files"] = args.sample_file
         elif args.sample_format == "ct":
             data_dict["structures"], sequence_tuple = data.Read_CT(args.sample_file)
+            data_dict["sequence"] = "".join(sequence_tuple)
+            data_dict["name"] = "provided sequence"
+
             dot_structures = [data.To_Dot_Bracket(
                     data.Basepairs_To_Helices(struct), len(data_dict["sequence"]))[0]
                 for struct in data_dict["structures"]] 
