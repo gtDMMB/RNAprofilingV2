@@ -198,6 +198,26 @@ def get_coverage_count(tree, count="count"):
 
     return total
 
+def save_footer_data(
+        filename,
+        arguments,
+        sequence):
+
+    bool_keys = ["sequence_file","sample_file","RNAstructure_location","sequence_name"]
+
+    with open(filename, "w") as f:
+        f.write("var argsText = \"{}\";\n".format(
+            " ".join("{}={}".format(key,value) 
+                for key, value in vars(arguments).items() 
+                if key not in bool_keys and value is not None) + 
+            " " +
+            " ".join(str(key)
+                for key, value in vars(arguments).items()
+                if key in bool_keys 
+                and value is not None 
+                and value != "")))
+        f.write("var sequenceText = \"{}\";\n".format(sequence))
+
 def save_stem_legend_data(
         filename, 
         reversed_feature_dict, 
@@ -1191,6 +1211,8 @@ def main():
             graph, feature_dataframe, helix_labels, reversed_hc_feature_labels)
     save_node_sample_indices(output_data_folder + "nodeSampleIndicesJSON.js", 
             graph, helix_structures)
+    save_footer_data(output_data_folder + "footerText.js",
+            args, sequence)
 
     import subprocess
     subprocess.run(["dot","-T","svg","-o", output_data_folder + "tree.svg",output_data_folder + "tree.dot"])

@@ -1,8 +1,24 @@
 
+.footer {
+    height: 45px;
+    overflow-y: auto;
+}
+
+#args {
+    margin-top:0;
+    margin-bottom:0;
+}
+
+#sequence {
+    margin-top:0;
+    margin-bottom:0;
+    word-wrap: break-word;
+}
+
 .interactable-diagram {
     display: flex;
+    height: calc(98vh - 45px);
     width: 1024px;
-    height: 98vh;
     margin: auto;
 }
 

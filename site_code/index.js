@@ -296,7 +296,14 @@ function indepFeatButtonPress() {
 
 document.addEventListener('DOMContentLoaded', function() {
 
-    console.log("Test2");
+    var footerArgsNode = document.getElementById("args");
+    var argsTextNode = document.createTextNode(argsText);
+    footerArgsNode.appendChild(argsTextNode);
+
+    var footerSequenceNode = document.getElementById("sequence");
+    var sequenceTextNode = document.createTextNode(sequenceText);
+    footerSequenceNode.appendChild(sequenceTextNode);
+
     var treediv = document.getElementById("treediv");
 
     var draw = SVG().addTo(treediv);
@@ -349,7 +356,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 //node.on("mouseover", mouseOverEffect(id));
             }
         });
-    console.log("Test");
 
     tree.data = tree.data;
 
