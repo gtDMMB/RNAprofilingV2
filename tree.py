@@ -127,6 +127,7 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
 def get_decision_text(decision_list):
     decision_text_list = []
     for decision in decision_list:
+
         if len(decision[1]) == 0:
             decision_text_list.append(", ".join(decision[0]))
             continue
@@ -733,7 +734,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
 
     if (distance_to_leaves is not None 
             and distance_to_leaves > 1
-            and present_leaf_count >= (2 ** (distance_to_leaves - 1)) * fuzzy_cutoff):
+            and present_leaf_count >= (2 ** distance_to_leaves) * fuzzy_cutoff):
 
         #print("starting node merging")
 
@@ -748,7 +749,7 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
             
         flattened_decisions = sum((list(decision[0]) + list(decision[1]) for decision in decision_set), [])
         feature_keys, feature_counts = np.unique(flattened_decisions, return_counts=True)
-
+        
         if np.all(feature_counts == 1):
 
             leaves = [node for node in nx.descendants(tree, node) if tree.nodes[node]["type"] == "selected_profile"]
