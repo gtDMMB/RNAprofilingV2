@@ -15,7 +15,7 @@ def generate_leaf_radial_diagrams(folder, G, helix_structures, sequence):
     from collections import Counter
 
     for node, node_data in G.nodes(data=True):
-        if "type" in node_data and node_data["type"] not in ["selected_profile", "contingency"]:
+        if "type" in node_data and node_data["type"] != "selected_profile":
             continue
         if "type" not in node_data:
             continue
@@ -178,10 +178,7 @@ def prepare_agraph_attrs(G, include_profiles = False):
         elif "count" in node_data:
             label_rows.append(str(node_data["count"]))
 
-        if "type" in node_data and node_data["type"] == "contingency":
-            node_data["style"] = "dashed"
-
-        if "type" in node_data and node_data["type"] in ["selected_profile", "contingency"]:
+        if "type" in node_data and node_data["type"] == "selected_profile":
             leaf_idx += 1
             roman_numeral = roman.toRoman(leaf_idx)
             label_rows.append(roman_numeral)
@@ -267,7 +264,7 @@ def save_leaf_data(filename, G):
 
     file_data = []
     for node in G.nodes():
-        if "type" in G.nodes[node] and G.nodes[node]["type"] not in ["selected_profile", "contingency"]:
+        if "type" in G.nodes[node] and G.nodes[node]["type"] != "selected_profile":
             continue
         if "type" not in G.nodes[node]:
             continue
@@ -450,7 +447,8 @@ def _build_tree_new_recr(tree, current_node, current_samples, decision_history_p
         tree.add_node(leaf_node)
         tree.add_edge(current_node, leaf_node)
 
-        tree.nodes[leaf_node]["type"] = "selected_profile"
+        tree.nodes[current_node]["type"] = "selected_profile"
+        tree.nodes[leaf_node]["type"] = "leaf"
 
         return
 
