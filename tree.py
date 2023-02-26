@@ -250,8 +250,8 @@ def save_stem_legend_data(
     for helix_class in sorted(grouped_classes, key = lambda x: -helix_counts[x]):
         class_data_table.append({
             "Helix Class": helix_class_labels[helix_class],
-            "(i, j, k)": str(helix_class),
-            "Exact Frequency": helix_counts[helix_class]})
+            "max (i, j, k)": str(helix_class),
+            "Exact Freq": helix_counts[helix_class]})
 
     json_data = json.dumps(data_table)
     json_class_data = json.dumps(class_data_table)
