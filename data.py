@@ -401,6 +401,11 @@ def Helices_To_Helix_Classes(helix_list, sequence):
     result = set()
     for helix in helix_list:
         helix_class = Helix_To_Helix_Class(helix, sequence)
+
+        if helix_class is None:
+            print("ERROR: non-canonical basepair present in helix ", helix)
+            quit()
+
         result.add(helix_class)
 
     return tuple(sorted(list(result)))
