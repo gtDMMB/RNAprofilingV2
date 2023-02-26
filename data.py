@@ -127,6 +127,7 @@ def Sample_Sequence(sequence, structure_count=100):
 def Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, output_file, structure_count=1000):
         import subprocess
         from pathlib import Path
+        import rna_shape
 
         data_tables = Path(RNAstructure_location) / "data_tables"
         stochastic_program = Path(RNAstructure_location) / "exe/stochastic"
@@ -141,6 +142,13 @@ def Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, out
             env=dict(os.environ,DATAPATH=data_tables.resolve()))
 
         structures, sequence_tuple = Read_CT(ct_file.resolve())
+
+        helix_structures = [Basepairs_To_Helices(struct) for struct in structures]
+        for idx, helix_struct in enumerate(helix_structures):
+            if rna_shape.build_tree(helix_struct, check_for_pseudoknot=True)[1]:
+                print("CT file contains a pseudoknot! Pseudoknots are not currently supported. Exiting")
+                print("Structure {} was ".format(idx + 1), helix_struct)
+                quit()
 
         if output_file is not None:
             dot_structures = [To_Dot_Bracket(Basepairs_To_Helices(struct), len(sequence_tuple))[0]

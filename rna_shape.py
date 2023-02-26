@@ -15,15 +15,22 @@ def get_root_key():
     return (-2, float('inf'), 1)
 
 def insert_helix(helix_tuple, input_key, helix_tree):
+    pseudoknot = False
+
     for test_key in helix_tree[input_key]["children"]:
         if helix_tuple[0] >= test_key[0] and helix_tuple[1] <= test_key[1]:
-            insert_helix(helix_tuple, test_key, helix_tree)
-            return
+            return insert_helix(helix_tuple, test_key, helix_tree)
+        elif helix_tuple[0] >= test_key[0] and helix_tuple[0] <= test_key[1]:
+            pseudoknot = True
+        elif helix_tuple[1] >= test_key[0] and helix_tuple[1] <= test_key[1]:
+            pseudoknot = True
 
     helix_tree[input_key]["children"].append(helix_tuple)
     helix_tree[helix_tuple] = {"parent":input_key, "children":[]}
 
-def build_tree(helix_list):
+    return pseudoknot
+
+def build_tree(helix_list, check_for_pseudoknot = False):
     
     helix_list = [(x[0], -x[1], x[2]) for x in helix_list]
     helix_list.sort()
@@ -33,8 +40,13 @@ def build_tree(helix_list):
     helix_tree = {}
     helix_tree[root_key] = {"parent":"None", "children":[]}
 
+    pseudoknot = False
     for helix_tuple in helix_list:
-        insert_helix(helix_tuple, root_key, helix_tree)
+        pseudoknot_present = insert_helix(helix_tuple, root_key, helix_tree)
+        pseudoknot = (pseudoknot or pseudoknot_present)
+
+    if check_for_pseudoknot:
+        return helix_tree, pseudoknot
 
     return helix_tree
 

@@ -5,6 +5,7 @@ import numpy as np
 import itertools
 from hellinger import hellinger_numpy
 from structure_dataframe import StructureDataframe
+import rna_shape
 
 def rev_shift(helix):
     return (helix[0] - 1, helix[1] - 1, helix[2])
@@ -1070,6 +1071,13 @@ def main():
             data_dict["structures"], sequence_tuple = data.Read_CT(args.sample_file)
             data_dict["sequence"] = "".join(sequence_tuple)
             data_dict["name"] = "provided sequence"
+
+            helix_structures = [data.Basepairs_To_Helices(struct) for struct in data_dict["structures"]]
+            for idx, helix_struct in enumerate(helix_structures):
+                if rna_shape.build_tree(helix_struct, check_for_pseudoknot=True)[1]:
+                    print("CT file contains a pseudoknot! Pseudoknots are not currently supported. Exiting")
+                    print("Structure {} was ".format(idx + 1), helix_struct)
+                    quit()
 
             dot_structures = [data.To_Dot_Bracket(
                     data.Basepairs_To_Helices(struct), len(data_dict["sequence"]))[0]
