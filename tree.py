@@ -737,7 +737,6 @@ def _merge_complete_binary_trees_new_recr(node, tree, distance_dict, fuzzy_cutof
         present_leaf_count += 1
 
     if (distance_to_leaves is not None 
-            and distance_to_leaves > 1
             and present_leaf_count >= (2 ** distance_to_leaves) * fuzzy_cutoff):
 
         #print("starting node merging")
