@@ -1053,6 +1053,11 @@ def main():
             dot_structures = data.Read_Dot_Structures(args.sample_file)
 
             if any(len(struct)!=len(data_dict["sequence"]) for struct in dot_structures):
+                for idx, struct in enumerate(dot_structures):
+                    if len(struct) != len(data_dict["sequence"]):
+                        print("On structure {} length was {} when sequence length is {}".format(
+                            idx + 1, len(struct), len(data_dict["sequence"])))
+                        break
                 print("sampled structure length and sequence length are different. exiting")
                 exit()
 

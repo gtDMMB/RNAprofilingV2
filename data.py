@@ -284,7 +284,7 @@ def Read_Dot_Structures(file_name):
         for line in f:
             if line.startswith(">"):
                 continue
-            result.append(line.strip().split(" ")[0])
+            result.append(line.strip().split()[0])
 
     return result
 
