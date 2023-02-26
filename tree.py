@@ -186,6 +186,10 @@ def prepare_agraph_attrs(G, include_profiles = False):
             node_data["shape"] = "box"
             node_data["leaf_label"] = roman_numeral
 
+            in_edge = next(iter(G.in_edges(node[0])))
+            if "style" in G.edges[in_edge] and G.edges[in_edge]["style"] == "dashed":
+                node_data["style"] = "dashed"
+
         node_data["label"] = "\n".join(label_rows)
 
 def get_coverage_count(tree, count="count"):
