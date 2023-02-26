@@ -124,7 +124,7 @@ def Sample_Sequence(sequence, structure_count=100):
 
     return structures
 
-def Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, output_file):
+def Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, output_file, structure_count=1000):
         import subprocess
         from pathlib import Path
 
@@ -136,6 +136,7 @@ def Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, out
             stochastic_program.resolve(), 
             "--sequence",
             "--seed", str(seed), 
+            "--ensemble", str(structure_count),
             sequence_file, ct_file.resolve()],
             env=dict(os.environ,DATAPATH=data_tables.resolve()))
 
@@ -248,7 +249,7 @@ def load_sample_sequence(
         if cache_folder is not None:
             Write_Dot_Structures(cache_file.resolve(), sequence, dot_structures)
     else:
-        structures = Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, cache_file.resolve())
+        structures = Sample_Sequence_RNAstructure(RNAstructure_location, seed, sequence_file, cache_file.resolve(), structure_count)
 
 
     result_dict["structures"] = structures
