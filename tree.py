@@ -133,7 +133,7 @@ def get_decision_text(decision_list):
             decision_text_list.append(", ".join(decision[0]))
             continue
 
-        decision_text_list.append(", ".join(decision[0]) + " || " + ", ".join(decision[1]))
+        decision_text_list.append(", ".join(decision[0]) + ", " + ", ".join("¬" + elem for elem in decision[1]))
 
     return ", ".join("(" + text + ")" for text in decision_text_list)
 
@@ -237,11 +237,12 @@ def save_stem_legend_data(
     for key in sorted_keys:
         value = reversed_feature_dict[key]
         region = data.Find_Stem_Region(value)
+        region_string = "{}, {}; {}, {}".format(*region)
         label_list = list(sorted(helix_class_labels[helix_class] for helix_class in value))
 
         data_table.append({
             "Feature": key,
-            "Region": str(region),
+            "Region": region_string,
             "Frequency": feature_counts[key],
             "Helix Classes": ", ".join(str(lab) for lab in label_list)})
 
@@ -341,16 +342,18 @@ def save_indep_node_data(filename, G, feature_df, label_dict, reversed_stem_labe
 
         for idx,row_decision_present in enumerate(row_labels):
             for row_decision_idx, present in enumerate(row_decision_present):
-                label = ",".join(row_decisions[row_decision_idx][int(not present)])
-                if label == "":
-                    label = ",".join("¬" + str(feat) for feat in row_decisions[row_decision_idx][int(present)])
+                present_features = row_decisions[row_decision_idx][int(not present)]
+                absent_features = tuple("¬" + feat for feat in row_decisions[row_decision_idx][int(present)])
+                label = ",".join(present_features + absent_features)
+
                 crosstab_list[idx + len(col_decisions)][row_decision_idx] = label 
 
         for idx,col_decision_present in enumerate(col_labels):
             for col_decision_idx, present in enumerate(col_decision_present):
-                label = ",".join(col_decisions[col_decision_idx][int(not present)])
-                if label == "":
-                    label = ",".join("¬" + feat for feat in col_decisions[col_decision_idx][int(present)])
+                present_features = col_decisions[col_decision_idx][int(not present)]
+                absent_features = tuple("¬" + feat for feat in col_decisions[col_decision_idx][int(present)])
+                label = ",".join(present_features + absent_features)
+
                 crosstab_list[col_decision_idx][idx + len(row_decisions)] = label 
             
         for (row_idx,row_decision_present),(col_idx,col_decision_present) in itertools.product(
