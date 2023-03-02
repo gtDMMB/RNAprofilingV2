@@ -170,6 +170,10 @@ td {
   height: 20px;
 }
 
+#indep-table-switch {
+  margin-bottom: 5px;
+}
+
 .switch input {
   opacity: 0;
   width: 0;

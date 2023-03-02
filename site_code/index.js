@@ -9,6 +9,7 @@ var indepNodeData = {};
 var indepNodeHelixData = {};
 var nodeIndexData = {};
 var bpCoverageData = {};
+var use_counts = true;
 
 // https://stackoverflow.com/questions/13405129/javascript-create-and-save-file/30832210#30832210
 // Function to download data to a file
@@ -69,45 +70,20 @@ function nodeClickEffect(id, child) {
                 radial_holder.scrollIntoView();
         }
 
+        selected_node_id = id
+
         if (id in indepNodeData)
         {
-            var htmlTable = document.getElementById("indep-table");
-            while (htmlTable.rows.length > 0)
-                htmlTable.deleteRow(-1);
-
-            {
-                let tableData = indepNodeData[id]
-                for (let row = 0; row < tableData.length; row++)
-                {
-                    let tr = htmlTable.insertRow(-1);
-                    for (let col = 0; col < tableData[row].length; col++) {
-                        if (tableData.length == 2 && col == 0)
-                            var tableElement = document.createElement("th");
-                        else if (row == 0 && tableData.length > 2)
-                            var tableElement = document.createElement("th");
-                        else if (tableData[0][col] == "")
-                            var tableElement = document.createElement("th");
-                        else if (tableData[row][0] == "")
-                            var tableElement = document.createElement("th");
-                        else
-                            var tableElement = document.createElement("td");
-                        tableElement.innerHTML = tableData[row][col];
-
-                        tr.appendChild(tableElement);
-                    }
-                }
-            }
+	    buildIndepNodeTable();
 
             document.getElementById("indep-table-div").classList.remove("hidden");
-            //document.getElementById("indep-feat-div").classList.remove("hidden");
+            document.getElementById("indep-table-switch").classList.remove("hidden");
         }
         else
         {
             document.getElementById("indep-table-div").classList.add("hidden");
-            //document.getElementById("indep-feat-div").classList.add("hidden");
+            document.getElementById("indep-table-switch").classList.add("hidden");
         }
-
-        selected_node_id = id
 
         document.getElementById("download-frequent").disabled = false;
         document.getElementById("download-all").disabled = false;
@@ -147,6 +123,62 @@ function diagramClickEvent(id, treeNode) {
 
         document.getElementById("download-frequent").disabled = false;
         document.getElementById("download-all").disabled = false;
+    }
+}
+
+function buildIndepNodeTable() {
+    var htmlTable = document.getElementById("indep-table");
+    while (htmlTable.rows.length > 0)
+	htmlTable.deleteRow(-1);
+
+    let total_count = 1;
+    if (!use_counts) {
+	total_count = 0;
+
+	let tableData = indepNodeData[selected_node_id]
+	for (let row = 0; row < tableData.length; row++)
+	{
+	    for (let col = 0; col < tableData[row].length; col++) {
+		if (tableData.length == 2 && col == 0)
+		    continue;
+		else if (row == 0 && tableData.length > 2)
+		    continue;
+		else if (tableData[0][col] == "")
+		    continue;
+		else if (tableData[row][0] == "")
+		    continue;
+		total_count += parseInt(tableData[row][col]);
+	    }
+	}
+    }
+    {
+	let tableData = indepNodeData[selected_node_id]
+	for (let row = 0; row < tableData.length; row++)
+	{
+	    let tr = htmlTable.insertRow(-1);
+	    for (let col = 0; col < tableData[row].length; col++) {
+		let dataElement = false;
+		if (tableData.length == 2 && col == 0)
+		    var tableElement = document.createElement("th");
+		else if (row == 0 && tableData.length > 2)
+		    var tableElement = document.createElement("th");
+		else if (tableData[0][col] == "")
+		    var tableElement = document.createElement("th");
+		else if (tableData[row][0] == "")
+		    var tableElement = document.createElement("th");
+		else {
+		    var tableElement = document.createElement("td");
+		    dataElement = true;
+		}
+
+		if (use_counts || !dataElement)
+		    tableElement.innerHTML = tableData[row][col];
+		else
+		    tableElement.innerHTML = (parseInt(tableData[row][col]) / total_count).toFixed(3);
+
+		tr.appendChild(tableElement);
+	    }
+	}
     }
 }
 
@@ -234,6 +266,15 @@ function buildRadialDiagramColumn() {
         image.addEventListener("click", diagramClickEvent(id, nodeShapes[id]));
     }
 
+}
+
+function onCountTypeChange() {
+    let countType = document.getElementById("count-type");
+
+    use_counts =  countType.checked;
+
+    if (selected_node_id != -1)
+	buildIndepNodeTable();
 }
 
 function onDiagramTypeChange() {
@@ -374,6 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
     leafList = leafData.map(function(row) { return row["id"]; });
 
     document.getElementById("diagram-type").addEventListener("change", onDiagramTypeChange);
+    document.getElementById("count-type").addEventListener("change", onCountTypeChange);
+
+    onDiagramTypeChange();
+    onCountTypeChange();
 
     indepNodeData = JSON.parse(indepNodeJSON);
     //indepNodeHelixData = JSON.parse(indepNodeHelixJSON);

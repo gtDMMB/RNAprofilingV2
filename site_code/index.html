@@ -34,7 +34,16 @@
                     <img id="arc-diagram" src="arc_diagram/arc_diagram_default.svg" class="center" width=100%>
                 </div>
                 <div class="scroll-section">
-                    <div id="indep-table-div" class="top-data indep-table-div hidden">
+		    <div id="indep-table-switch" class="hidden">
+		    <label class="switch">
+		        <input id="count-type" type="checkbox" checked>
+		        <span class="slider">
+			    <span class="on">Counts</span>
+			    <span class="off">Proportions</span>
+		        </span>
+		    </label>
+		    </div>
+                    <div id="indep-table-div" class="middle-data indep-table-div hidden">
                         <table id="indep-table" border="1px" align="center"></table>
                     </div>
                     <div class="middle-data">

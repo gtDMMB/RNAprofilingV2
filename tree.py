@@ -322,7 +322,7 @@ def save_indep_node_data(filename, G, feature_df, label_dict, reversed_stem_labe
         values, counts = np.unique(transformed_array, return_counts=True, axis=0)
         if len(values.shape) == 1:
             np.expand_dims(values, -1)
-        freq_dict = {tuple(value):count/transformed_array.shape[0] for value, count in zip(values, counts)}
+        freq_dict = {tuple(value):int(count) for value, count in zip(values, counts)}
 
         row_decisions, col_decisions = [], []
         if decision_count <= 4:
