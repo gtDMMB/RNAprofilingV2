@@ -137,7 +137,7 @@ def get_decision_text(decision_list):
 
     return ", ".join("(" + text + ")" for text in decision_text_list)
 
-def prepare_agraph_attrs(G, include_profiles = False):
+def prepare_agraph_attrs(G, include_profiles = False, frequency_format="counts", total_count=None):
     for edge in G.edges(data = True):
         edge_data = edge[2]
         edge_data["id"] = str(edge[0]) + "_" + str(edge[1])
@@ -176,9 +176,28 @@ def prepare_agraph_attrs(G, include_profiles = False):
         elif include_profiles:
             label_rows.append(",".join(str(x) for x in node_data["features"]))
         if "count_old" in node_data and "count" in node_data:
-            label_rows.append(str(node_data["count"]) + " [" + str(node_data["count_old"]) + "]")
+            if (frequency_format == "decimals"):
+                label_rows.append("{:.3f} [{:.3f}]".format(
+                    node_data["count"] / total_count,
+                    node_data["count_old"] / total_count))
+            elif (frequency_format == "percentages"):
+                label_rows.append("{:0.1f}% [{:0.1f}%]".format(
+                    node_data["count"] / total_count * 100,
+                    node_data["count_old"] / total_count * 100))
+            else:
+                label_rows.append("{} [{}]".format(
+                    node_data["count"],
+                    node_data["count_old"]))
         elif "count" in node_data:
-            label_rows.append(str(node_data["count"]))
+            if (frequency_format == "decimals"):
+                label_rows.append("{:.3f}".format(
+                    node_data["count"] / total_count))
+            elif (frequency_format == "percentages"):
+                label_rows.append("{:0.1f}%".format(
+                    node_data["count"] / total_count * 100))
+            else:
+                label_rows.append("{}".format(
+                    node_data["count"]))
 
         if "type" in node_data and node_data["type"] == "selected_profile":
             leaf_idx += 1
@@ -988,7 +1007,8 @@ def main():
     parser.add_argument("--sample_file")
     parser.add_argument("--sample_format",
             choices=["dot","ct"],
-            default="dot")
+            default="dot",
+            help="Use the \"dot\" setting for .gtboltz files")
     parser.add_argument("--RNAstructure_location")
     parser.add_argument("--sample_count",
             type=int,
@@ -1005,9 +1025,9 @@ def main():
             action="store_true")
     parser.add_argument("--consistent_helix_indexing",
             action="store_true")
-    #parser.add_argument("--frequency_format", 
-    #        choices=["counts","percentages","decimals"],
-    #        default="counts")
+    parser.add_argument("--frequency_format", 
+            choices=["counts","percentages","decimals"],
+            default="counts")
     parser.add_argument("--contingency_node_proportion",
             type=float,
             default=None)
@@ -1192,7 +1212,10 @@ def main():
                 hc_feature_labels,
                 sequence)
 
-    prepare_agraph_attrs(graph,include_profiles=(args.output_style == "hasse"))
+    prepare_agraph_attrs(graph,
+            include_profiles=(args.output_style == "hasse"),
+            frequency_format=args.frequency_format,
+            total_count = len(helix_structures))
     output_agraph = nx.nx_agraph.to_agraph(graph)
 
     output_folder = "output/"
