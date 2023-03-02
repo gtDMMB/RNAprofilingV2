@@ -1287,12 +1287,11 @@ def main():
     with open(output_data_folder + "sequenceName.js","w") as f:
         f.write("var sequenceName = \"" + sequence_name + "\";\n")
 
+    dot_structures = [data.To_Dot_Bracket(struct, len(sequence))[0]
+        for struct in helix_structures] 
     with open(output_data_folder + "sampleGTBOLTZ.js","w") as f:
         f.write("var sampleGTBOLTZ = `\n")
-        with open(sample_file,"r") as sample_file:
-            next(sample_file)
-            sample_text = sample_file.read()
-        f.write(sample_text)
+        f.write("\n".join(dot_structures))
         f.write("\n`;")
         
 if __name__ == "__main__":

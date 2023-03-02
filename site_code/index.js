@@ -304,8 +304,8 @@ function singleStructButtonPress() {
 
     download(
         dataString, 
-        sequenceName + "_node_" + selected_node_id + "_most_frequent_structure.gtboltz", 
-        "gtboltz");
+        sequenceName + "_node_" + selected_node_id + "_most_frequent_structure.dot", 
+        "dot");
 }
 
 function allStructButtonPress() {
@@ -318,8 +318,8 @@ function allStructButtonPress() {
 
     download(
         dataString, 
-        sequenceName + "_node_" + selected_node_id + "_all_structures.gtboltz", 
-        "gtboltz");
+        sequenceName + "_node_" + selected_node_id + "_all_structures.dot", 
+        "dot");
 }
 
 function indepFeatButtonPress() {

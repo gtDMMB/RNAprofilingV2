@@ -89,7 +89,7 @@ def Dot_to_BP(dot_string):
             bp_list.append((matching_idx, idx))
 
     return bp_list
-    
+
 #seed_set = False
 def Init_RNA_Seed(seed=''):
     import RNA
