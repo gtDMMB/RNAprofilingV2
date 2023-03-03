@@ -928,7 +928,7 @@ def remove_empty_forced_edges(tree, ignore_leaves=True):
     for edge in reversed(sorted(contract_edges)):
         nx.contracted_nodes(tree, edge[0], edge[1], copy=False, self_loops=False)
 
-def build_hasse_diagram(dataframe, min_node_freq, helix_structures = None, helix_class_labels = None, sequence = None):
+def build_hasse_diagram(dataframe, min_node_freq, helix_structures = None, helix_class_labels = None, sequence = None, simplify_bracket=False):
     selected_profiles = dataframe.subset(frequency_cutoff = min_node_freq)
 
     featured_profiles = []
@@ -977,10 +977,13 @@ def build_hasse_diagram(dataframe, min_node_freq, helix_structures = None, helix
         if helix_structures is None or helix_class_labels is None or sequence is None:
             continue
 
-        hasse_diagram.nodes[node]["bracket"] = data.Generate_Bracket(
-                [helix_structures[idx] for idx in partial_match_dataframe.index],
-                {hc:label for hc, label in helix_class_labels.items() if label in node}, 
-                sequence)
+        if not simplify_bracket:
+            hasse_diagram.nodes[node]["bracket"] = data.Generate_Bracket(
+                    [helix_structures[idx] for idx in partial_match_dataframe.index],
+                    {hc:label for hc, label in helix_class_labels.items() if label in node}, 
+                    sequence)
+        else:
+            hasse_diagram.nodes[node]["bracket"] = ", ".join(present_features)
 
     hasse_diagram = nx.convert_node_labels_to_integers(hasse_diagram)
 

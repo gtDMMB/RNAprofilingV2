@@ -834,12 +834,18 @@ def Generate_Bracket(helix_structures, helix_class_labels, sequence, method=None
         structure_bracket = rna_shape.find_bracket(structure, local_label_dict)
         bracket_list.append(structure_bracket)
 
+    max_length = max(br.count("[") for br in bracket_list)
+    bracket_list = [br for br in bracket_list if br.count("[") == max_length]
+
     counts = Counter(bracket_list)
 
     if method is not None and method == "max":
         most_common = max(bracket_list, key = len)
     else:
         most_common = max(bracket_list, key = counts.get)
+
+    if len(counts) > 1:
+        print("Warning: multiple conflicting bracket notations. ", counts)
 
     if most_common == "":
         most_common = "[]"
