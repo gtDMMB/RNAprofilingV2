@@ -963,7 +963,7 @@ def build_hasse_diagram(dataframe, min_node_freq, helix_structures = None, helix
 
         hasse_diagram.nodes[node]["count_old"] = np.sum(partial_match_dataframe.counts)
         hasse_diagram.nodes[node]["count"] = np.sum(exact_match_dataframe.counts)
-        hasse_diagram.nodes[node]["structure_idxs"] = exact_match_dataframe.index
+        hasse_diagram.nodes[node]["structure_idxs"] = partial_match_dataframe.index
         hasse_diagram.nodes[node]["features"] = node
 
         if hasse_diagram.in_degree(node) == 0:
