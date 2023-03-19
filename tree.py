@@ -31,7 +31,7 @@ def generate_leaf_radial_diagrams(folder, G, helix_structures, sequence):
         structure_counts = Counter(node_structures)
         most_common_struct = max(node_structures, key = structure_counts.get)
 
-        filename = folder + "radial_diagram_{}.svg".format(node)
+        filename = folder / "radial_diagram_{}.svg".format(node)
 
         draw.plot_radial_diagram(
             most_common_struct, 
@@ -51,7 +51,7 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
         if (j - i) > max_diameter:
             max_diameter = (j - i)
 
-    empty_filename = folder + "arc_diagram_default.svg"
+    empty_filename = folder / "arc_diagram_default.svg"
 
     figure_ratio = max_diameter / len(sequence) * 0.6
     draw.generate_region_arc_diagram(
@@ -107,7 +107,7 @@ def generate_node_arc_diagrams(folder, G, helix_structures, helix_class_labels, 
             negative_helices.update(
                 [rev_shift(helix) for helix in reversed_label_map[feature]])
 
-        filename = folder + "arc_diagram_{}.svg".format(node)
+        filename = folder / "arc_diagram_{}.svg".format(node)
 
         label = None
         if "leaf_label" in node_data:
@@ -998,6 +998,7 @@ def main():
     import Enumerate
 
     import argparse
+    from pathlib import Path
 
     parser = argparse.ArgumentParser(
             prog = "RNAprofile",
@@ -1007,6 +1008,7 @@ def main():
             dest="sequence_file",
             nargs="?",
             help="Required unless a sample file with the ct format is provided")
+    parser.add_argument("--output_folder")
     parser.add_argument("--sample_file")
     parser.add_argument("--sample_format",
             choices=["dot","ct"],
@@ -1119,7 +1121,6 @@ def main():
 
             seq_hash = data.get_hash(data_dict["sequence"])
 
-            from pathlib import Path
             Path("cached_structures").mkdir(parents=True, exist_ok=True)
             cache_file = Path.joinpath(Path("cached_structures"), 
                 "{}_{}_{}_imported.dot_struct".format(data_dict["name"], seq_hash, len(dot_structures)))
@@ -1229,17 +1230,20 @@ def main():
             total_count = len(helix_structures))
     output_agraph = nx.nx_agraph.to_agraph(graph)
 
-    output_folder = "output/"
-    arc_diagram_folder = output_folder + "arc_diagram/"
-    radial_diagram_folder = output_folder + "radial_diagram/"
-    output_data_folder = output_folder + "Data/"
+    if args.output_folder is not None:
+        output_folder = Path(args.output_folder)
+    else:
+        output_folder = Path("output/")
+    arc_diagram_folder = (output_folder / "arc_diagram/").resolve()
+    radial_diagram_folder = (output_folder / "radial_diagram/").resolve()
+    output_data_folder = (output_folder / "Data/").resolve()
 
     import os
     import shutil
 
-    if os.path.exists(output_folder):
-        shutil.rmtree(output_folder)
-    shutil.copytree("site_code",output_folder)
+    if os.path.exists(output_folder.resolve()):
+        shutil.rmtree(output_folder.resolve())
+    shutil.copytree("site_code",output_folder.resolve())
 
     if not os.path.exists(arc_diagram_folder):
         os.makedirs(arc_diagram_folder)
@@ -1248,7 +1252,7 @@ def main():
     if not os.path.exists(output_data_folder):
         os.makedirs(output_data_folder)
 
-    output_agraph.write(output_data_folder + "tree.dot")
+    output_agraph.write(output_data_folder / "tree.dot")
 
     #coverage = get_coverage_count(tree)
     #coverage_prop = coverage / sum(feature_dataframe.counts)
@@ -1272,35 +1276,35 @@ def main():
     #############################################
     
     save_stem_legend_data(
-        output_data_folder + "legendJSON.js", 
+        output_data_folder / "legendJSON.js", 
         reversed_hc_feature_labels, 
         feature_counts, 
         helix_class_counts, 
         helix_labels)
-    save_leaf_data(output_data_folder + "leafJSON.js", graph)
-    save_indep_node_data(output_data_folder + "indepNodeJSON.js", 
+    save_leaf_data(output_data_folder / "leafJSON.js", graph)
+    save_indep_node_data(output_data_folder / "indepNodeJSON.js", 
             graph, feature_dataframe, helix_labels, reversed_hc_feature_labels)
-    save_node_sample_indices(output_data_folder + "nodeSampleIndicesJSON.js", 
+    save_node_sample_indices(output_data_folder / "nodeSampleIndicesJSON.js", 
             graph, helix_structures)
-    save_footer_data(output_data_folder + "footerText.js",
+    save_footer_data(output_data_folder / "footerText.js",
             args, sequence)
 
     import subprocess
-    subprocess.run(["dot","-T","svg","-o", output_data_folder + "tree.svg",output_data_folder + "tree.dot"])
+    subprocess.run(["dot","-T","svg","-o", output_data_folder / "tree.svg",output_data_folder / "tree.dot"])
 
-    with open(output_data_folder + "treeSVG.js","w",encoding="utf-8") as f:
+    with open(output_data_folder / "treeSVG.js","w",encoding="utf-8") as f:
         f.write("var treeTXT = `\n")
-        with open(output_data_folder + "tree.svg","r",encoding="utf-8") as svg_file:
+        with open(output_data_folder / "tree.svg","r",encoding="utf-8") as svg_file:
             svg_text = svg_file.read()
         f.write(svg_text)
         f.write("\n`;")
 
-    with open(output_data_folder + "sequenceName.js","w") as f:
+    with open(output_data_folder / "sequenceName.js","w") as f:
         f.write("var sequenceName = \"" + sequence_name + "\";\n")
 
     dot_structures = [data.To_Dot_Bracket(struct, len(sequence))[0]
         for struct in helix_structures] 
-    with open(output_data_folder + "sampleGTBOLTZ.js","w") as f:
+    with open(output_data_folder / "sampleGTBOLTZ.js","w") as f:
         f.write("var sampleGTBOLTZ = `\n")
         f.write("\n".join(dot_structures))
         f.write("\n`;")
