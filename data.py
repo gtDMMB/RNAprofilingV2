@@ -94,6 +94,14 @@ def Dot_to_BP(dot_string):
 def Init_RNA_Seed(seed=''):
     import RNA
 
+    version_number = tuple(int(x) for x in RNA.__version__.split("."))
+
+    if len(version_number) != 3:
+        print("Warning: version number of RNAlib has wrong number of elements.", version_number)
+    elif version_number < (2, 5, 1):
+        print("Warning: version of RNAlib is older than 2.5.1, setting a seed is disabled")
+        return
+
     RNA.init_rand(seed)
 
     #seed_set = True

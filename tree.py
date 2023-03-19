@@ -1066,6 +1066,14 @@ def main():
         seed = randrange(99999999)
 
     if args.sample_file is None and args.RNAstructure_location is None:
+
+        import importlib.util
+        package_name = 'RNA'
+        spec = importlib.util.find_spec(package_name)
+        if spec is None:
+            print("RNAlib is not installed. Please either provide a sample or the location of an RNAstructure installation.")
+            exit()
+
         data.Init_RNA_Seed(seed)
 
     if args.sample_file is None:
